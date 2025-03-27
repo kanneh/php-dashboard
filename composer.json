@@ -1,9 +1,8 @@
 {
-    "name": "alhajikanneh/php-dashboard",
-    "license": "MIT",
+    "name": "kanneh/php-dashboard",
     "autoload": {
         "psr-4": {
-            "Alhajikanneh\\PhpDashboard\\": "src/"
+            "Kanneh\\PhpDashboard\\": "src/"
         }
     },
     "authors": [
