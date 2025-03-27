@@ -1,0 +1,16 @@
+{
+    "name": "alhajikanneh/php-dashboard",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Alhajikanneh\\PhpDashboard\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Alhaji Kanneh",
+            "email": "alhajikanneh@gmail.com"
+        }
+    ],
+    "require": {}
+}
