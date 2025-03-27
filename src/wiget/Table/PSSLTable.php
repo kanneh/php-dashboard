@@ -47,7 +47,7 @@ class PSSLTable extends PSSLBaseWiget{
 
         if(isset($config["dataTable"])){
             print_r("<script>");
-            print_r("$(document).ready(function() {");
+            print_r("window.addEventListener('load',function() {");
             print_r("$('#{$tb->id}').DataTable(".json_encode($config['dataTable']).");");
             print_r("});");
             print_r("</script>");
