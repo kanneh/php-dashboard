@@ -5,6 +5,7 @@ require_once __DIR__ . '/../vendor/autoload.php';
 use Kanneh\PhpDashboard\Utils\PSSLCalculatedField;
 use Kanneh\PhpDashboard\Utils\PSSLCalculatedFields;
 use Kanneh\PhpDashboard\Utils\PSSLGroup;
+use Kanneh\PhpDashboard\Utils\PSSLMerge;
 use Kanneh\PhpDashboard\Wiget\Charts\ChartJS\ChartJSDataSet;
 use Kanneh\PhpDashboard\PDOMYSQL;
 use Kanneh\PhpDashboard\PSSLReport;
@@ -12,6 +13,7 @@ use Kanneh\PhpDashboard\PSSLDataStore;
 use Kanneh\PhpDashboard\Utils\PSSLLimit;
 use Kanneh\PhpDashboard\Utils\PSSLSort;
 use Kanneh\PhpDashboard\Wiget\Charts\ChartJS\PSSLChartJS;
+use Kanneh\PhpDashboard\Wiget\PSSLCard;
 use Kanneh\PhpDashboard\Wiget\Table\PSSLTable;
 
 class MyReport extends PSSLReport
@@ -36,9 +38,12 @@ class MyReport extends PSSLReport
         ]))
         ->pipe(new PSSLDataStore("companies"));
 
-        $srcInvoices = $this->src("mysql")->fetch("SELECT c.title AS company,i.customer,i.officer,i.invoicedate,ii.quantity,ii.unitprice,it.title AS product,i.id AS invoiceid FROM invoiceitems ii LEFT JOIN invoices i on ii.invoiceid = i.id LEFT JOIN items it ON ii.item = it.id LEFT JOIN companies c ON i.company = c.id");
+        $srcInvoices = $this->src("mysql")->fetch("SELECT c.title AS company,i.customer,i.officer,i.invoicedate,ii.quantity,ii.unitprice,it.title AS product,i.id AS invoiceid,ii.id FROM invoiceitems ii LEFT JOIN invoices i on ii.invoiceid = i.id LEFT JOIN items it ON ii.item = it.id LEFT JOIN companies c ON i.company = c.id")
+        ->pipe(new PSSLDataStore("rawinvoices"));
 
-        $srcInvoicesMod = $srcInvoices
+        // print_r($srcInvoices);
+
+        $srcInvoices
         ->pipe(new PSSLCalculatedField([
             "name"=>"total",
             "formula"=>"{quantity}*{unitprice}"
@@ -47,9 +52,7 @@ class MyReport extends PSSLReport
             "monthName"=>"date('F_Y',strtotime({invoicedate}))",
             "Year"=>"date('Y',strtotime({invoicedate}))"
         ]))
-        ->pipe(new PSSLDataStore("invoices"));
-
-        $srcInvoicesMod
+        ->pipe(new PSSLDataStore("invoices"))
         ->pipe(new PSSLGroup([
             [
                 ["min_total","min","total"],
@@ -60,6 +63,35 @@ class MyReport extends PSSLReport
             ],['officer','company','invoiceid']
         ]))
         ->pipe(new PSSLDataStore("invoicesbyofficersbyinvoice"));
+
+        $this->resetToDataStore("invoices")
+        ->pipe(new PSSLGroup([
+            [
+                ['min_total','min','total']
+                ,['max_total','max','total']
+                ,['avg_total','avg','total']
+            ],['officer']
+        ]))
+        ->pipe(new PSSLDataStore("invoicesbyofficers"));
+
+        $this->src("mysql")->fetch("SELECT COUNT(*) ctn FROM invoices")
+        ->pipe(new PSSLDataStore("invoicescount"));
+
+        $companies = $this->src("mysql")->fetch("SELECT * FROM companies")
+        ->pipe(new PSSLDataStore("mcompanies"));
+        $items = $this->src("mysql")->fetch("SELECT * FROM items")
+        ->pipe(new PSSLDataStore("mitems"));
+
+        $itemcompanies = $this->pipe(new PSSLMerge([
+            "type"=>"right",
+            "dataStore1"=>$this->dataStore("mcompanies"),
+            "dataStore2"=>$this->dataStore("mitems"),
+            "condition"=>[
+                ["id","company","="]
+                // ["company","id","="]
+            ]
+        ]))
+        ->pipe(new PSSLDataStore("itemcompanies"));
 
     }
 }
@@ -74,6 +106,26 @@ $report = new MyReport();
     </head>
     <body>
     <div class="container-fluid">
+        <div class="row mb-2">
+            <?php 
+            PSSLCard::create([
+                "value"=>10000,
+                "title"=>[
+                    'text'=>"Total Test",
+                    'css'=>'text-center bg-info-darken-5 text-white'
+                ]
+            ]);
+            PSSLCard::create([
+                "dataStore"=>$report->dataStore("invoices"),
+                "column"=>'id',
+                "fxn"=>"",
+                "title"=>[
+                    'text'=>"Total Invoices Issued",
+                    'css'=>'text-center bg-info-darken-5 text-white'
+                ]
+            ]);
+            ?>
+        </div>
         <div class="row">
             <div class="col-md-6">
                 <div style="height:300px;" >
@@ -125,22 +177,72 @@ $report = new MyReport();
                         "datasets"=>[
                             
                         ]
+                        ],
+                    "options"=>[
+                        "plugins"=>[
+                            "title"=>[
+                                "display"=>true,
+                                "text"=> 'Invoices by Staff'
+                            ]
+                        ]
                     ]
                 ])
                 ->setType("line")
                 ->pipe(new ChartJSDataSet([
-                    "label"=>"Min Total By Invoice",
-                    "dataStore"=>$report->dataStore("invoicesbyofficersbyinvoice"),
+                    "label"=>"Minimuim",
+                    "dataStore"=>$report->dataStore("invoicesbyofficers"),
                     "columns"=>[
                         "min_total"
                     ],
                     
                 ]))
-                ->setLabels($report->dataStore("invoicesbyofficersbyinvoice")->get("officer"))
+                ->pipe(new ChartJSDataSet([
+                    "label"=>"Maximuim",
+                    "dataStore"=>$report->dataStore("invoicesbyofficers"),
+                    "columns"=>[
+                        "max_total"
+                    ],
+                    
+                ]))
+                ->pipe(new ChartJSDataSet([
+                    "label"=>"Average",
+                    "dataStore"=>$report->dataStore("invoicesbyofficers"),
+                    "columns"=>[
+                        "avg_total"
+                    ],
+                    
+                ]))
+                ->setLabels($report->dataStore("invoicesbyofficers")->get("officer"))
                 ->render()
                  ?>
                 </div>
             </div>
+        </div>
+        <div class="mt-2 mb-2">
+        <?php
+// print_r($report->dataStore("invoicesbyofficers")->data);
+PSSLTable::create([
+    "data"=>$report->dataStore("invoicesbyofficers"),
+    
+    "css"=>"table table-striped table-bordered",
+    "dataTable"=>[
+        "responsive"=>true
+    ]
+]);
+?>
+        </div>
+        <div class="mt-2 mb-2">
+        <?php
+
+PSSLTable::create([
+    "data"=>$report->dataStore("itemcompanies"),
+    
+    "css"=>"table table-striped table-bordered",
+    "dataTable"=>[
+        "responsive"=>true
+    ]
+]);
+?>
         </div>
         <div class="mt-2 mb-2">
         <?php
@@ -175,6 +277,7 @@ PSSLTable::create([
     "dataTable"=>[]
 ]);
 ?>
+
     </div>
     <script src="/examples/jquery.js"></script>
     <script src="/examples/datatables.min.js"></script>

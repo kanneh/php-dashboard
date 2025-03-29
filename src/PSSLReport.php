@@ -55,4 +55,9 @@ class PSSLReport
     public function dataStore($name){
         return $this->dataStores[$name];
     }
+
+    public function resetToDataStore($name){
+        $this->data = $this->dataStore($name)->get();
+        return $this;
+    }
 }
