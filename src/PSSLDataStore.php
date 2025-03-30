@@ -19,11 +19,7 @@ class PSSLDataStore
 
     public function get($key=""){
         if($key){
-            if(count($this->data) == 1){
-                return $this->data[0][$key];
-            }else{
-                return array_column($this->data,$key);
-            }
+            return array_column($this->data,$key);
         }
         return $this->data;
     }
