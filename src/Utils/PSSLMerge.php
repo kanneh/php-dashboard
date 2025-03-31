@@ -167,11 +167,13 @@ class PSSLMerge{
                     }
                 }
                 if(! $found){
-                    $row2 = $data2[0];
-                    foreach ($row2 as $key => $value) {
-                        $row2[$key] = null;
+                    if(count($data2)>0){
+                        $row2 = $data2[0];
+                        foreach ($row2 as $key => $value) {
+                            $row2[$key] = null;
+                        }
+                        $this->data[] = $this->buildRow($row,$row2,$src2name);
                     }
-                    $this->data[] = $this->buildRow($row,$row2,$src2name);
                 }
             }
             // $this->data = array_map(function($row) use ($data2,$joinConditions,$src2name){
