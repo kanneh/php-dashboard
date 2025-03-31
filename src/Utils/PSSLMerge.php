@@ -183,7 +183,7 @@ class PSSLMerge{
             }
             $oper = $this->getOper($criteria[2]);
             // echo "rcd1: $rcd1, rcd2: $rcd2, oper: $oper exp: $rcd1 $oper $rcd2";
-            $result = eval("return $rcd1 $oper $rcd2;");
+            $result = eval("return '$rcd1' $oper '$rcd2';");
         }
         // echo " Result: ".strval($result?"True":"false")."<br>";
         // echo "Test Done<br>";
