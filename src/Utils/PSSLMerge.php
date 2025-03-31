@@ -26,15 +26,16 @@ class PSSLMerge{
         // echo "<br><br>";
 
         if(isset($config['type']) && $config['type'] === "inner"){
-            print_r("Inner");
-            echo "<br><br>";
+            // print_r("Inner");
+            // echo "<br><br>";
             $this->data = [];
             foreach($data1 as $row){
+                $found = false;
                 foreach($data2 as $row2){
-                    echo "Testing Resultant: ";
+                    // echo "Testing Resultant: ";
 
                     $resultant = $this->test($joinConditions[0],$row,$row2);
-                    echo "done<br><br>";
+                    // echo "done<br><br>";
                     $nextjoin = count($joinConditions)>1?$joinConditions[1]:"";
                     if($resultant && ($nextjoin == "" || $nextjoin == "OR")){
                         $this->data[] = $this->buildRow($row,$row2,$src2name);
@@ -43,7 +44,6 @@ class PSSLMerge{
                     $nextcond = "";
                     $i=2;
                     $cancontinue = count($joinConditions) > $i && $nextjoin != "";
-                    $found = false;
                     while($cancontinue){
                         $nextcond = $this->test($joinConditions[$i],$row,$row2);
                         if($nextjoin == "OR"){
@@ -122,27 +122,29 @@ class PSSLMerge{
             },$data2);
 
         }else{
-            $this->data = array_map(function($row) use ($data2,$joinConditions,$src2name){
+            foreach($data1 as $row){
+                $found = false;
                 foreach($data2 as $row2){
+                    // echo "Testing Resultant: ";
+
                     $resultant = $this->test($joinConditions[0],$row,$row2);
+                    // echo "done<br><br>";
                     $nextjoin = count($joinConditions)>1?$joinConditions[1]:"";
                     if($resultant && ($nextjoin == "" || $nextjoin == "OR")){
-                        return $this->buildRow($row,$row2,$src2name);
-                    }elseif($nextjoin == ""){
-                        $row2 = $data2[0];
-                        foreach ($row2 as $key => $value) {
-                            $row2[$key] = null;
-                        }
-                        return $this->buildRow($row,$row2,$src2name);
+                        $this->data[] = $this->buildRow($row,$row2,$src2name);
+                        $found = true;
+                        break;
                     }
                     $nextcond = "";
                     $i=2;
-                    $cancontinue = count($joinConditions) > $i;
+                    $cancontinue = count($joinConditions) > $i && $nextjoin != "";
                     while($cancontinue){
                         $nextcond = $this->test($joinConditions[$i],$row,$row2);
                         if($nextjoin == "OR"){
                             if($nextcond){
-                                return $this->buildRow($row,$row2,$src2name);
+                                $this->data[] = $this->buildRow($row,$row2,$src2name);
+                                $found = true;
+                                break;
                             }
                             $resultant = $nextcond;
                         }else{
@@ -153,19 +155,69 @@ class PSSLMerge{
                         if($cancontinue){
                             $nextjoin = $joinConditions[$i];
                             if($nextjoin == "OR" && $resultant){
-                                return $this->buildRow($row,$row2,$src2name);
+                                $this->data[] = $this->buildRow($row,$row2,$src2name);
+                                $found = true;
+                                break;
                             }
                             $i++;
                         }
                     }
+                    if($found){
+                        break;
+                    }
+                }
+                if(! $found){
+                    $row2 = $data2[0];
+                    foreach ($row2 as $key => $value) {
+                        $row2[$key] = null;
+                    }
+                    $this->data[] = $this->buildRow($row2,$row2,$src2name);
+                }
+            }
+            // $this->data = array_map(function($row) use ($data2,$joinConditions,$src2name){
+            //     foreach($data2 as $row2){
+            //         $resultant = $this->test($joinConditions[0],$row,$row2);
+            //         $nextjoin = count($joinConditions)>1?$joinConditions[1]:"";
+            //         if($resultant && ($nextjoin == "" || $nextjoin == "OR")){
+            //             return $this->buildRow($row,$row2,$src2name);
+            //         }elseif($nextjoin == ""){
+            //             $row2 = $data2[0];
+            //             foreach ($row2 as $key => $value) {
+            //                 $row2[$key] = null;
+            //             }
+            //             return $this->buildRow($row,$row2,$src2name);
+            //         }
+            //         $nextcond = "";
+            //         $i=2;
+            //         $cancontinue = count($joinConditions) > $i;
+            //         while($cancontinue){
+            //             $nextcond = $this->test($joinConditions[$i],$row,$row2);
+            //             if($nextjoin == "OR"){
+            //                 if($nextcond){
+            //                     return $this->buildRow($row,$row2,$src2name);
+            //                 }
+            //                 $resultant = $nextcond;
+            //             }else{
+            //                 $resultant == $resultant && $nextcond;
+            //             }
+            //             $i++;
+            //             $cancontinue = count($joinConditions)> $i+1;
+            //             if($cancontinue){
+            //                 $nextjoin = $joinConditions[$i];
+            //                 if($nextjoin == "OR" && $resultant){
+            //                     return $this->buildRow($row,$row2,$src2name);
+            //                 }
+            //                 $i++;
+            //             }
+            //         }
 
-                }
-                $row2 = $data2[0];
-                foreach ($row2 as $key => $value) {
-                    $row2[$key] = null;
-                }
-                return $this->buildRow($row,$row2,$src2name);
-            },$data1);
+            //     }
+            //     $row2 = $data2[0];
+            //     foreach ($row2 as $key => $value) {
+            //         $row2[$key] = null;
+            //     }
+            //     return $this->buildRow($row,$row2,$src2name);
+            // },$data1);
         }
     }
     private function test($criteria,$row1,$row2,$right=false){
